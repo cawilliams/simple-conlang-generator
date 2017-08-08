@@ -6,6 +6,7 @@ import random
 
 words = []
 phonemes = {}
+exceptions = []
 filename = 'example.json'
 
 running = True
@@ -27,16 +28,29 @@ def generate_words(sample, phonemes, num=10):
                     if gen and phtype == sample[j]:
                         k = random.choice(phonemes[phtype])
                         word += k
-        if not word in words:
+        if (not word in words) and (not isExceptional(word)):
             words.append(word)
-            i += 1
+
+        i += 1
         word = ""
 
+def isExceptional(word):
+    global exceptions
+    for i in range(0, len(exceptions)):
+        if exceptions[i] in word:
+            return True
+    return False
+
+
+
 def command_exec(cmd):
-    global words, phonemes, filename
+    global words, phonemes, filename, exceptions
     params = cmd.split()
     if params == []:
+        print("Phonemes:\n")
         print(phonemes)
+        print("Forbidden clusters:\n")
+        print(exceptions)
 
     elif params[0] == "exit":
         running = False
@@ -58,12 +72,22 @@ def command_exec(cmd):
         print()
 
     elif params[0] == "set":
-        pars = 0
-        if len(params) == 3:
-            phonemes[params[1]] = params[2]
-
+        #pars = 0
+        
+        if params[1] == "ph" and len(params) == 4:
+            phonemes[params[2]] = params[3]
+        elif params[1] == "ex" and len(params) > 2:
+            i = 2
+            while i < len(params):
+                if not params[i] in exceptions:
+                    exceptions.append(params[i])
+                else:
+                    exceptions.remove(params[i])
+                i += 1
         else:
-            print("! Error, can't set the phonemes inventory")
+            print("! Error, can't execute a command")
+
+        
 
     elif params[0] == "savewords":
         if len(params) == 2:
@@ -76,27 +100,46 @@ def command_exec(cmd):
 
     elif params[0] == "reset":
         phonemes = {}
+        exceptions = []
 
     elif params[0] == "save":
-        if len(params) > 1:
-            filename = params[1]
-        with open(filename, 'w') as outfile:
-            json.dump(phonemes, outfile)
+        if (len(params) > 2):
+            if params[1] == "ph":
+                filename = params[2]
+                with open(filename, 'w') as outfile_ph:
+                    json.dump(phonemes, outfile_ph)
+            elif params[1] == "ex":
+                filename = params[2]
+                with open(filename, 'w') as outfile_ex:
+                    json.dump(exceptions, outfile_ex)
+        else:
+            print("! Error, can't save a file")
 
     elif params[0] == "load":
-        if len(params) > 1:
-            filename = params[1]
-        with open(filename, 'r') as data_file:    
-            phonemes = json.load(data_file)
+        if (len(params)>2):
+            if params[1] == "ph":
+                filename = params[2]
+                with open(filename, 'r') as data_file_ph:    
+                    phonemes = json.load(data_file_ph)
+            elif params[1] == "ex":
+                filename = params[2]
+                with open(filename, 'r') as data_file_ex:    
+                    exceptions = json.load(data_file_ex)
+        else:
+            print("! Error, can't load a file")
 
     elif params[0] == "help":
-        print("set <typeOfPhoneme> <phonemes> - set class of phonemes typed with a single string")
-        print("reset' - reset phonemic invertory")
-        print("load <filename> - load phonemic invertory from file")
-        print("save <filename> - save phonemic invertory to file")
-        print("gen <phonemicPattern> [amountOfWords] - generate words")
-        print("savewords <filename>' - save wordlist to file")
-        print("exit' - close program")
+        print("set ph <typeOfPhoneme> <phonemes> - set class of phonemes typed with a single string;")
+        print("set ex <exception1> [exception2] [exception3] ... [exceptionN] - add/remove forbidden phonemic sequences;")
+        print("reset - reset phonemic invertory;")
+        print("load ph <filename> - load phonemic invertory from file;")
+        print("load ex <filename> - load forbidden phonemic sequences from file;")
+        print("save ph <filename> - save phonemic invertory to file;")
+        print("save ex <filename> - save forbidden phonemic sequences to file;")
+        print("gen <phonemicPattern> [amountOfWords] - generate words;")
+        print("savewords <filename> - save wordlist to file;")
+        print("exit - close program")
+    
 
 
 print("This is a word generator for your conlang :3\nType 'help' for additional info\n")
