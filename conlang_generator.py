@@ -1,77 +1,23 @@
 #!/usr/bin/python3
-import json
-import random
+# coding=utf-8
+from phonetics import Phonetics
 
 running = True
-
-class Phonetics:
-    filename = 'example.json'
-    phonemes = {}
-    exceptions = []
-    words = []
-
-    def __init__(self):
-        self.phonemes = {}
-        self.exceptions = []
-
-    def load(self):
-        with open(self.filename, 'r') as infile:
-            data = json.load(infile)
-            self.phonemes = data["phonemes"]
-            self.exceptions = data["exceptions"]
-
-    def save(self):
-        data = {
-            "phonemes": self.phonemes,
-            "exceptions": self.exceptions
-        }
-        with open(self.filename, 'w') as outfile:
-            json.dump(data, outfile)
-
-    def is_word_exceptional(self, word):
-        for ex in self.exceptions:
-            if ex in word:
-                return True
-        return False
-
-    def generate_words(self, sample, num=10):
-        self.words = []
-        gen = True
-        word = ""
-        i = 0
-        while i < int(num):
-            for j in range(0, len(sample)):
-                if sample[j] == '(':
-                    gen = random.randint(0, 1)
-                elif sample[j] == ')':
-                    gen = True
-                else:
-                    if gen:
-                        for phtype in self.phonemes.keys():
-                            if phtype == sample[j]:
-                                k = random.choice(self.phonemes[phtype])
-                                word += k
-
-            if not (word in self.words or self.is_word_exceptional(word)):
-                self.words.append(word)
-                i += 1
-            word = ""
-
-        return self.words
 
 
 def command_exec(phonetics, cmd):
     params = cmd.split()
-    if params == []:
+    if not params:
         print("Phonemes:")
         print(phonetics.phonemes)
         print("Forbidden clusters:")
         print(phonetics.exceptions)
 
     elif params[0] == "exit":
-        return (False, phonetics)
+        return False, phonetics
 
     elif params[0] == "gen":
+        words = []
         if len(params) == 2:
             words = phonetics.generate_words(params[1])
         elif len(params) == 3:
@@ -80,7 +26,7 @@ def command_exec(phonetics, cmd):
             print("! Error, can't generate words")
 
         for i, w in enumerate(words):
-            if i == 0 or i%10:
+            if i == 0 or i % 10:
                 print(w+" ", end='')
             else:
                 print(w+"\n", end='')
@@ -93,7 +39,7 @@ def command_exec(phonetics, cmd):
 
         elif params[1] == "ex" and len(params) > 2:
             for ex in params[2:]:
-                if not ex in phonetics.exceptions:
+                if ex not in phonetics.exceptions:
                     phonetics.exceptions.append(ex)
                 else:
                     phonetics.exceptions.remove(ex)
@@ -104,7 +50,7 @@ def command_exec(phonetics, cmd):
         if len(params) == 2:
             sw = open(params[1]+".txt", 'w')
             for i, w in enumerate(phonetics.words):
-                if i == 0 or i%10:
+                if i == 0 or i % 10:
                     sw.write(w+' ')
                 else:
                     sw.write(w+'\n')
@@ -124,7 +70,7 @@ def command_exec(phonetics, cmd):
 
     elif params[0] == "help":
         print("set ph <typeOfPhoneme> <phonemes> - set class of phonemes typed with a single string;")
-        print("set ex <exception1> [exception2] [exception3] ... [exceptionN] - add/remove forbidden phonemic sequences;")
+        print("set ex <exception1> [exception2] ... [exceptionN] - add/remove forbidden phonemic sequences;")
         print("reset - reset phonemic invertory;")
         print("load ph <filename> - load phonemic invertory from file;")
         print("load ex <filename> - load forbidden phonemic sequences from file;")
@@ -133,13 +79,13 @@ def command_exec(phonetics, cmd):
         print("gen <phonemicPattern> [amountOfWords] - generate words;")
         print("savewords <filename> - save wordlist to file;")
         print("exit - close program")
-    
-    return (True, phonetics)
 
+    return True, phonetics
 
-print("This is a word generator for your conlang :3\nType 'help' for additional info\n")
-phon = Phonetics()
+if __name__ == '__main__':
+    print("This is a word generator for your conlang :3\nType 'help' for additional info\n")
+    phon = Phonetics()
 
-while running:
-    command = input(">> ")
-    running, phon = command_exec(phon, command)
+    while running:
+        command = input(">> ")
+        running, phon = command_exec(phon, command)
