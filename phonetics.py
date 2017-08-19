@@ -10,11 +10,11 @@ class Phonetics(object):
     words = []
 
     def __init__(self, file=None):
-        if file is not None:
-            self.filename = file
-            self.load()
         self.phonemes = {}
         self.exceptions = []
+        if file:
+            self.filename = file
+            self.load()
 
     def load(self):
         with open(self.filename) as infile:
@@ -63,7 +63,8 @@ class Phonetics(object):
 
     """parsing sound changes rule with the notation X>Y/Z, where X is a set of source phonemes
     Y - a set of resulting phonemes, Z - a positional condition (optional)"""
-    def parse_phonetic_rule_notation(self, inline):
+    @staticmethod
+    def parse_phonetic_rule_notation(inline):
         rule = inline.split('>')
         if len(rule) != 2:
             return []
@@ -76,26 +77,26 @@ class Phonetics(object):
         if len(final) > 2:
             return []
         elif len(final) == 2:
-            posCond = final[1].split('_')
-            if len(posCond) != 2:
+            pos_conf = final[1].split('_')
+            if len(pos_conf) != 2:
                 return []
-            posCond[0] = posCond[0].split('#')
-            posCond[1] = posCond[1].split('#')
+            pos_conf[0] = pos_conf[0].split('#')
+            pos_conf[1] = pos_conf[1].split('#')
 
-            if (len(posCond[0]) == 2) and len(posCond[0][0]) > 0:
+            if (len(pos_conf[0]) == 2) and len(pos_conf[0][0]) > 0:
                 return []
-            elif len(posCond[0]) == 2:
+            elif len(pos_conf[0]) == 2:
                 rule.append(True)
-                rule.append(posCond[0][1])
+                rule.append(pos_conf[0][1])
             else:
                 rule.append(False)
-                rule.append(posCond[0][0])
+                rule.append(pos_conf[0][0])
 
-            if (len(posCond[1]) == 2) and len(posCond[1][1]) > 0:
+            if (len(pos_conf[1]) == 2) and len(pos_conf[1][1]) > 0:
                 return []
 
-            rule.append(posCond[1][0])
-            if len(posCond[1]) == 2:
+            rule.append(pos_conf[1][0])
+            if len(pos_conf[1]) == 2:
                 rule.append(True)
             else:
                 rule.append(False)
@@ -115,26 +116,19 @@ class Phonetics(object):
 
         return final
 
-    # do phonemic sequence follow condition?
+    """ check if phonemic sequence follow condition"""
     def is_sequence_match_pattern(self, rule, word, pos, seq):
         begin = rule[0]
-        bSeq = rule[1]
-        eSeq = rule[2]
         end = rule[3]
+        begin_phonemic_class = rule[1] or ('#' if begin else '?')
+        end_phonemic_class = rule[2] or ('#' if end else '?')
 
-        seqB = bSeq + seq
-        # print(seqB)
-        bCond = ((not begin) or pos == 0) and self.is_sequences_match(seqB, word[pos:len(seqB) + pos])
-        # print(word[pos:len(seqB)])
+        word_substr = word[pos-1:pos+len(seq)+1]
+        sequence = begin_phonemic_class + seq + end_phonemic_class
 
-        seqE = seq + eSeq
-        # print(seqE)
-        eCond = ((not end) or pos == len(word)-len(seqE)) and self.is_sequences_match(seqE, word[pos:len(seqE) + pos])
-        # print(word[pos:len(seqE)])
+        return self.is_sequences_match(word_substr, sequence)
 
-        return bCond and eCond
-
-    # are two phonemic sequences matching?
+    """check if two phonemic sequences matching"""
     def is_sequences_match(self, seq1, seq2):
         if len(seq1) != len(seq2):
             return False
@@ -146,45 +140,40 @@ class Phonetics(object):
                 pass
             elif seq2[i].isupper() and seq2[i] in self.phonemes and seq1[i] in self.phonemes.get(seq2[i]):
                 pass
+            elif seq1[i] == '?' or seq2[i] == '?':
+                pass
             else:
                 return False
 
         return True
 
-    # apply sound change rule to a word
+    """apply sound change rule to a word"""
     def proceed_phonetic_change(self, word, change):
-        law = self.parse_phonetic_rule_notation(change)
+        law = Phonetics.parse_phonetic_rule_notation(change)
         chars_from = law[0]
         chars_to = law[1]
         rules = law[2]
 
-        res_word = word
+        res_word = '#'+word+'#'
         # для каждого из сочетания заменяемых звуков
         for i in range(0, len(chars_from)):
             # делаем цикл по всему слову
             for j in range(0, len(res_word)-len(chars_from[i])+1):
                 src_seq = res_word[j:len(chars_from[i])+j]
 
-                if len(law) == 2:
-                    if self.is_sequences_match(src_seq, chars_from[i]):
-                        res_seq = self.set_clear_sequence(src_seq, chars_from[i], chars_to[i])
-                        res_word = res_word.replace(src_seq, res_seq)
-                        break
+                if self.is_sequence_match_pattern(rules, res_word, j, src_seq):
+                    res_seq = Phonetics.set_clear_sequence(src_seq, chars_from[i], chars_to[i])
+                    res_word = res_word[:j] + res_seq + res_word[len(src_seq)+j:]
+                    break
 
-                elif len(law) == 3:
-                    if self.is_sequences_match(src_seq, chars_from[i]):
-                        if self.is_sequence_match_pattern(rules, res_word, j, src_seq):
-                            res_seq = self.set_clear_sequence(src_seq, chars_from[i], chars_to[i])
-                            res_word = res_word[:j] + res_word[j:len(src_seq)+j].replace(src_seq, res_seq) + res_word[len(src_seq)+j:]
-                            break
+        return res_word.strip('#')
 
-        return res_word
-
-    # to set certain characters of wildcards in resulting sequence
-    def set_clear_sequence(self, srcSeq, srcLaw, resLaw):
-        res = resLaw
-        for i in range(0, len(srcLaw)):
-            if srcLaw[i].isupper():
-                if res.find(srcLaw[i]) != -1:
-                    res = res.replace(srcLaw[i], srcSeq[i])
+    """set certain characters of wildcards in resulting sequence"""
+    @staticmethod
+    def set_clear_sequence(src_seq, chars_from, chars_to):
+        res = chars_to
+        for i in range(0, len(chars_from)):
+            if chars_from[i].isupper():
+                if res.find(chars_from[i]) != -1:
+                    res = res.replace(chars_from[i], src_seq[i])
         return res

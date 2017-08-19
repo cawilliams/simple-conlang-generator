@@ -1,6 +1,6 @@
 # simple-conlang-generator
 
-A word generator for your conlang.
+A word generator for your conlang in Python 3.
 
 Reddit thread [here](https://www.reddit.com/r/conlangs/comments/6sdalz/simple_word_generator_written_in_python/)
 
@@ -26,3 +26,15 @@ Reddit thread [here](https://www.reddit.com/r/conlangs/comments/6sdalz/simple_wo
 `savewords <filename>` - save wordlist to file
 
 `exit` - close program
+
+## testing
+
+install requirements
+```
+pip install -r requirements-test.txt
+```
+
+```
+coverage run -m unittest discover -s tests -t tests
+coverage report
+```

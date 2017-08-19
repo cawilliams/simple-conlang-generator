@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import os
 import unittest
 from phonetics import Phonetics
+
+TESTFILE_1 = os.path.join(os.path.dirname(__file__), 'test_conlang.json')
 
 
 class TestInterpreter(unittest.TestCase):
@@ -18,7 +21,7 @@ class TestInterpreter(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """ Setup """
-        cls.conlang = Phonetics("test_conlang.json")
+        cls.conlang = Phonetics(TESTFILE_1)
 
     """test sequences match"""
     def test_sequences_matches_positive(self):
